@@ -34,7 +34,7 @@ void setup() {
   servo_z.attach(servo_z_pin);
   servo_x.write(85);
   servo_y.write(95);
-  delay(1000);
+  delay(100);
   Wire.begin();                      // Initialize comunication
   Wire.beginTransmission(MPU);       // Start communication with MPU6050 // MPU=0x68
   Wire.write(0x6B);                  // Talk to the register 6B
@@ -59,12 +59,8 @@ void setup() {
 }
 void loop() {
   // === Read acceleromter data === //
-  
   MeasureAcc();
   MeasureGyro();
-
-
-
   // Complementary filter - combine acceleromter and gyro angle values
   roll = 0.95 * gyroAngleX + 0.05 * accAngleX;
   pitch = 0.95 * gyroAngleY + 0.05 * accAngleY;
@@ -75,9 +71,7 @@ void loop() {
   Serial.print(roll);
   Serial.print("\t");
   Serial.println(pitch);
-  // delay(100);
-  // Serial.print("/");
-  // Serial.println(yaw);
+
 }
 
 void MeasureAcc(){
