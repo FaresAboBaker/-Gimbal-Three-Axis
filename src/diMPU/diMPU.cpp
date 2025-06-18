@@ -1,7 +1,8 @@
+#include <Wire.h>
 #include "diMPU.h"
 
 diMPU::diMPU() {
-
+    resetGyro();
 }
 void diMPU::init(){
     Wire.begin();                      // Initialize comunication

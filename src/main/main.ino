@@ -5,9 +5,9 @@
 #define x_servo_offset 85
 #define y_servo_offset 95
 
-PID pid_x(0, 2.6 , 0.0235 , 1.175);
-PID pid_y(0, -1.7 , 0.02, 1.2);
-//PID pid_z(0, 0.5, 0, 0);
+PID pid_x(0, 1.5 , 0.0 , 0.0);
+PID pid_y(0, -1 , 0.0, 0.0);
+// PID pid_z(-180, 0.6, 0.0, 0.0);
 
 Servo servo_x;
 Servo servo_y;
@@ -42,16 +42,20 @@ void setup() {
   Wire.endTransmission(true);        //end the transmission
   
   // Configure Accelerometer Sensitivity - Full Scale Range (default +/- 2g)
+  Wire.beginTransmission(MPU);
+  Wire.write(0x1C);                  //Talk to the ACCEL_CONFIG register (1C hex)
+  Wire.write(0x10);                  //Set the register bits as 00010000 (+/- 8g full scale range)
+  Wire.endTransmission(true);
+  // Configure Gyro Sensitivity - Full Scale Range (default +/- 250deg/s)
+  Wire.beginTransmission(MPU);
+  Wire.write(0x1B);                   // Talk to the GYRO_CONFIG register (1B hex)
+  Wire.write(0x01);                   // Set the register bits as 00000001 (500deg/s full scale)
+  Wire.endTransmission(true);
+  delay(20);
   // Wire.beginTransmission(MPU);
-  // Wire.write(0x1C);                  //Talk to the ACCEL_CONFIG register (1C hex)
-  // Wire.write(0x10);                  //Set the register bits as 00010000 (+/- 8g full scale range)
+  // Wire.write(0x1A);                   // Talk to the Sensitivity register (1A hex)
+  // Wire.write(0x10);                   
   // Wire.endTransmission(true);
-  // // Configure Gyro Sensitivity - Full Scale Range (default +/- 250deg/s)
-  // Wire.beginTransmission(MPU);
-  // Wire.write(0x1B);                   // Talk to the GYRO_CONFIG register (1B hex)
-  // Wire.write(0x10);                   // Set the register bits as 00010000 (1000deg/s full scale)
-  // Wire.endTransmission(true);
-  // delay(20);
   
   // Call this function if you need to get the IMU error values for your module
   calculate_IMU_error();
@@ -66,6 +70,8 @@ void loop() {
   pitch = 0.95 * gyroAngleY + 0.05 * accAngleY;
   servo_x.write(pid_x.get_result(pitch) + x_servo_offset);
   servo_y.write(pid_y.get_result(roll ) + y_servo_offset);
+  // servo_z.write(pid_z.get_result(yaw));
+
   delay(20);
   // // Print the values on the serial monitor
   Serial.print(roll);
@@ -80,9 +86,9 @@ void MeasureAcc(){
   Wire.endTransmission(false);
   Wire.requestFrom(MPU, 6, true); // Read 6 registers total, each axis value is stored in 2 registers
   //For a range of +-2g, we need to divide the raw values by 16384, according to the datasheet
-  AccX = (Wire.read() << 8 | Wire.read()) / 16384.0; // X-axis value
-  AccY = (Wire.read() << 8 | Wire.read()) / 16384.0; // Y-axis value
-  AccZ = (Wire.read() << 8 | Wire.read()) / 16384.0; // Z-axis value
+  AccX = (Wire.read() << 8 | Wire.read()) / 4096.0; // X-axis value
+  AccY = (Wire.read() << 8 | Wire.read()) / 4096.0; // Y-axis value
+  AccZ = (Wire.read() << 8 | Wire.read()) / 4096.0; // Z-axis value
   // Calculating Roll and Pitch from the accelerometer data
   accAngleX = (atan(AccY / sqrt(pow(AccX, 2) + pow(AccZ, 2))) * 180 / PI) - AccErrorX; // AccErrorX ~(0.58) See the calculate_IMU_error()custom function for more details
   accAngleY = (atan(-1 * AccX / sqrt(pow(AccY, 2) + pow(AccZ, 2))) * 180 / PI) - AccErrorY; // AccErrorY ~(-1.58)
@@ -97,9 +103,9 @@ void MeasureGyro(){
   Wire.write(0x43); // Gyro data first register address 0x43
   Wire.endTransmission(false);
   Wire.requestFrom(MPU, 6, true); // Read 4 registers total, each axis value is stored in 2 registers
-  GyroX = (Wire.read() << 8 | Wire.read()) / 131.0; // For a 250deg/s range we have to divide first the raw value by 131.0, according to the datasheet
-  GyroY = (Wire.read() << 8 | Wire.read()) / 131.0;
-  GyroZ = (Wire.read() << 8 | Wire.read()) / 131.0;
+  GyroX = (Wire.read() << 8 | Wire.read()) / 65.5;
+  GyroY = (Wire.read() << 8 | Wire.read()) / 65.5;
+  GyroZ = (Wire.read() << 8 | Wire.read()) / 65.5;
   // Correct the outputs with the calculated error values
   GyroX = GyroX - GyroErrorX; // GyroErrorX ~(-0.56)
   GyroY = GyroY - GyroErrorY; // GyroErrorY ~(2)
@@ -120,9 +126,9 @@ void calculate_IMU_error() {
     Wire.write(0x3B);
     Wire.endTransmission(false);
     Wire.requestFrom(MPU, 6, true);
-    AccX = (Wire.read() << 8 | Wire.read()) / 16384.0 ;
-    AccY = (Wire.read() << 8 | Wire.read()) / 16384.0 ;
-    AccZ = (Wire.read() << 8 | Wire.read()) / 16384.0 ;
+    AccX = (Wire.read() << 8 | Wire.read()) / 4096.0 ;
+    AccY = (Wire.read() << 8 | Wire.read()) / 4096.0 ;
+    AccZ = (Wire.read() << 8 | Wire.read()) / 4096.0 ;
     // Sum all readings
     AccErrorX = AccErrorX + ((atan((AccY) / sqrt(pow((AccX), 2) + pow((AccZ), 2))) * 180 / PI));
     AccErrorY = AccErrorY + ((atan(-1 * (AccX) / sqrt(pow((AccY), 2) + pow((AccZ), 2))) * 180 / PI));
@@ -141,9 +147,9 @@ void calculate_IMU_error() {
     GyroY = Wire.read() << 8 | Wire.read();
     GyroZ = Wire.read() << 8 | Wire.read();
     // Sum all readings
-    GyroErrorX = GyroErrorX + (GyroX / 131.0);
-    GyroErrorY = GyroErrorY + (GyroY / 131.0);
-    GyroErrorZ = GyroErrorZ + (GyroZ / 131.0);
+    GyroErrorX = GyroErrorX + (GyroX / 65.5);
+    GyroErrorY = GyroErrorY + (GyroY / 65.5);
+    GyroErrorZ = GyroErrorZ + (GyroZ / 65.5);
     delay(1);
   }
   //Divide the sum by multiMeasure to get the error value
