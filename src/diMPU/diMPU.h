@@ -1,10 +1,8 @@
-
-#define multiMeasure 700
-#define MPU 0x68 // MPU6050 I2C address
-
 #ifndef diMPU_H
 #define diMPU_H
 
+#define multiMeasure 700
+#define MPU 0x68 // MPU6050 I2C address
 
 class diMPU{
 private:
